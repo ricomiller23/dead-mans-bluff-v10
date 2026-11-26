@@ -1,0 +1,2687 @@
+import os
+
+HTML_CODE = r'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DEAD MAN'S BLUFF — Old West Saloon Poker Showdown</title>
+<style>
+/* ============================================================
+   RESET & OLD WEST SALOON THEME (WEB-SAFE FONTS ONLY)
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #0d0704;
+  color: #eeddbb;
+  font-family: Rockwell, "Courier New", Georgia, serif;
+  font-size: 14px;
+}
+
+/* Atmospheric Saloon Background & Film Grain Overlay */
+#saloon-viewport {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: 
+    radial-gradient(ellipse at 50% 25%, rgba(245, 175, 75, 0.25) 0%, rgba(20, 10, 6, 0.96) 80%),
+    linear-gradient(180deg, #1d1007 0%, #0d0603 100%);
+}
+
+/* Wood plank texture effect */
+#saloon-viewport::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, 
+    rgba(0,0,0,0.22) 0px, 
+    rgba(0,0,0,0.22) 3px, 
+    transparent 3px, 
+    transparent 64px),
+    repeating-linear-gradient(180deg, 
+    rgba(255,200,100,0.02) 0px, 
+    rgba(0,0,0,0.35) 110px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Vignette & dust overlay */
+#saloon-viewport::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 130px rgba(0,0,0,0.95), inset 0 0 220px rgba(0,0,0,0.85);
+  pointer-events: none;
+  z-index: 99;
+}
+
+/* Ambient Saloon Lanterns with flicker */
+.lantern-glow {
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 190, 70, 0.28) 0%, rgba(255, 140, 30, 0.08) 50%, transparent 75%);
+  pointer-events: none;
+  z-index: 2;
+  animation: lanternFlicker 3.4s infinite alternate ease-in-out;
+}
+.lantern-left { top: 30px; left: 60px; }
+.lantern-right { top: 30px; right: 60px; animation-delay: 1.7s; }
+
+@keyframes lanternFlicker {
+  0% { opacity: 0.82; transform: scale(0.97); }
+  25% { opacity: 1.0; transform: scale(1.04); }
+  50% { opacity: 0.88; transform: scale(0.96); }
+  75% { opacity: 1.05; transform: scale(1.02); }
+  100% { opacity: 0.85; transform: scale(0.98); }
+}
+
+/* Saloon Background Decor: Longhorn & Half-Doors */
+.saloon-decor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.35;
+}
+.longhorn-skull {
+  top: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 50px;
+}
+.swinging-doors {
+  top: 50px;
+  left: 18px;
+  width: 48px;
+  height: 70px;
+  border: 2px solid #5a3416;
+  border-radius: 3px;
+  display: flex;
+}
+.door-leaf {
+  flex: 1;
+  background: repeating-linear-gradient(0deg, #3d200e 0, #3d200e 4px, #2a1408 4px, #2a1408 8px);
+  border: 1px solid #1a0a03;
+}
+
+/* Dust Motes Canvas */
+#dust-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Gunshot & Liar screen flash overlay */
+#gunshot-flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 200;
+  transition: opacity 0.08s ease-out;
+}
+#gunshot-flash.flashing {
+  opacity: 0.95;
+  transition: none;
+}
+
+/* Screen shake container */
+#table-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  transition: transform 0.05s ease-in-out;
+}
+.screen-shaking {
+  animation: violentShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes violentShake {
+  10%, 90% { transform: translate3d(-5px, -2px, 0) rotate(-0.6deg); }
+  20%, 80% { transform: translate3d(7px, 3px, 0) rotate(0.9deg); }
+  30%, 50%, 70% { transform: translate3d(-8px, -4px, 0) rotate(-1.1deg); }
+  40%, 60% { transform: translate3d(8px, 4px, 0) rotate(1deg); }
+}
+
+/* ============================================================
+   TOP BAR / SALOON HEADER
+   ============================================================ */
+#saloon-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: linear-gradient(180deg, rgba(38, 20, 10, 0.94) 0%, rgba(16, 8, 4, 0.92) 100%);
+  border-bottom: 2px solid #5a381e;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.7);
+  z-index: 20;
+}
+
+.brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand-title {
+  font-size: 1.25rem;
+  letter-spacing: 2.5px;
+  color: #ffcf70;
+  text-shadow: 2px 2px 0 #000, 0 0 12px rgba(255, 170, 40, 0.5);
+  font-weight: 900;
+}
+.round-badge {
+  background: #331c0e;
+  border: 1px solid #8d5d2e;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  color: #e5c386;
+  letter-spacing: 1px;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wood-btn {
+  background: linear-gradient(180deg, #6d4122 0%, #3e2211 100%);
+  border: 2px solid #b67d40;
+  border-radius: 4px;
+  color: #fce7ba;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 1px 2px 4px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.25);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+}
+.wood-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #87512a 0%, #4d2b15 100%);
+  border-color: #e2a55d;
+  color: #fff;
+  transform: translateY(-1px);
+}
+.wood-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.7);
+}
+.wood-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(60%);
+}
+
+/* ============================================================
+   MAIN TABLE SALOON ARENA
+   ============================================================ */
+#saloon-arena {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  overflow: hidden;
+}
+
+/* Top-down Angled Poker Table */
+#poker-table {
+  position: relative;
+  width: 95%;
+  max-width: 1020px;
+  height: 94%;
+  max-height: 630px;
+  border-radius: 200px;
+  background: radial-gradient(ellipse at 50% 50%, #1d5732 0%, #123e23 65%, #092414 100%);
+  border: 18px solid #3c1e0e;
+  box-shadow: 
+    inset 0 0 65px rgba(0,0,0,0.88),
+    inset 0 0 15px rgba(255,255,255,0.08),
+    0 14px 40px rgba(0,0,0,0.92),
+    0 0 0 4px #78401c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Brass tacks on table rim */
+#poker-table::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: 200px;
+  border: 2px dashed #b8860b;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Whiskey glass water stains on felt */
+.whiskey-stain {
+  position: absolute;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 3px solid rgba(80, 40, 10, 0.24);
+  filter: blur(1.5px);
+  pointer-events: none;
+  opacity: 0.55;
+}
+.stain-1 { top: 22%; left: 30%; transform: rotate(15deg) scaleY(0.7); }
+.stain-2 { bottom: 28%; right: 28%; transform: rotate(-25deg) scaleY(0.7); }
+
+/* Table Center Pot & Nailed Wanted Poster */
+#table-center {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  pointer-events: none;
+}
+
+/* Center Dealer Deck */
+#dealer-deck-spot {
+  position: absolute;
+  top: -85px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.deck-card-stack {
+  width: 52px;
+  height: 74px;
+  background: #251208;
+  border-radius: 6px;
+  border: 2px solid #a67c52;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.8), -2px 2px 0 #522d14, -4px 4px 0 #3a1e0d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Current Bet Notice - Nailed Wanted Poster */
+#bet-wanted-poster {
+  position: relative;
+  background: #e3cca2;
+  color: #2b180d;
+  padding: 10px 22px;
+  border-radius: 4px;
+  border: 2px solid #815933;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7), inset 0 0 20px rgba(110, 70, 30, 0.3);
+  text-align: center;
+  transform: rotate(-1.5deg);
+  min-width: 250px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#bet-wanted-poster::before {
+  /* Brass nail in top center */
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle, #e9c372 0%, #68481d 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+.poster-header {
+  font-size: 0.72rem;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #72421b;
+  font-weight: bold;
+  border-bottom: 1px dashed #a4784a;
+  padding-bottom: 3px;
+  margin-bottom: 4px;
+}
+.poster-bet-value {
+  font-size: 1.45rem;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  color: #1a0c06;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.poster-bettor {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: #553319;
+}
+
+/* Center Brass Pot with Bet Chips/Bullets */
+#table-pot {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(20, 10, 5, 0.65);
+  border-radius: 12px;
+  border: 1px solid #70451e;
+}
+.pot-text {
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  color: #dfba7e;
+  font-weight: bold;
+}
+.bullet-icon {
+  width: 14px;
+  height: 18px;
+  background: linear-gradient(180deg, #f5d47a 0%, #a07328 100%);
+  border-radius: 6px 6px 2px 2px;
+  border: 1px solid #664312;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+}
+
+/* ============================================================
+   PLAYERS AROUND THE TABLE
+   ============================================================ */
+.player-seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 12;
+  transition: all 0.3s ease;
+}
+
+/* Seat positions */
+#seat-human {
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  max-width: 580px;
+}
+
+#seat-mara {
+  left: 24px;
+  top: 48%;
+  transform: translateY(-50%);
+  width: 170px;
+}
+
+#seat-duke {
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+}
+
+#seat-silas {
+  right: 24px;
+  top: 48%;
+  transform: translateY(-50%);
+  width: 170px;
+}
+
+/* Player Plaque */
+.player-plaque {
+  position: relative;
+  background: linear-gradient(180deg, #3d2314 0%, #201109 100%);
+  border: 2px solid #8d5c2e;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  transition: all 0.25s ease;
+}
+.player-seat.active-turn .player-plaque {
+  border-color: #ffcf70;
+  box-shadow: 0 0 22px rgba(255, 190, 50, 0.7), inset 0 0 8px rgba(255, 210, 80, 0.3);
+}
+
+.player-portrait-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #190c05;
+  border: 2px solid #b58348;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 3px 6px rgba(0,0,0,0.6);
+  margin-bottom: 6px;
+  transition: all 0.3s ease;
+}
+
+.player-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.player-name {
+  font-size: 0.95rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #ffde94;
+  text-shadow: 1px 1px 0 #000;
+}
+.player-title {
+  font-size: 0.68rem;
+  color: #b59567;
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+/* Plaque Stats: mini card icons & bullet cylinder */
+.plaque-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(141, 92, 46, 0.4);
+}
+
+.mini-cards-holder {
+  display: flex;
+  gap: 3px;
+}
+.mini-card-icon {
+  width: 12px;
+  height: 18px;
+  background: #ecd9b3;
+  border: 1px solid #73481f;
+  border-radius: 2px;
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+}
+.mini-card-icon.empty {
+  background: rgba(30, 15, 8, 0.5);
+  border: 1px dashed #4e2e13;
+}
+
+/* Revolver 6-chamber cylinder indicator */
+.bullet-chamber {
+  display: flex;
+  gap: 2px;
+}
+.chamber-hole {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #110804;
+  border: 1px solid #704720;
+}
+.chamber-hole.loaded {
+  background: radial-gradient(circle, #ffe694 0%, #b8860b 80%);
+  border-color: #ffd700;
+  box-shadow: 0 0 4px #ffcc00;
+}
+.chamber-hole.spent {
+  background: #150904;
+  border-color: #551100;
+}
+
+/* Thinking Dots Animation for AI */
+.thinking-bubble {
+  position: absolute;
+  top: -32px;
+  background: #fff5db;
+  color: #2b180d;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+  border: 1px solid #855325;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  z-index: 25;
+  white-space: nowrap;
+}
+.thinking-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: #fff5db transparent;
+}
+.thinking-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #754117;
+  animation: dotPulse 1.2s infinite ease-in-out;
+}
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotPulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1.2); opacity: 1; }
+}
+
+/* Speech Dialogue Bubble */
+.speech-bubble {
+  position: absolute;
+  background: #fdf5e2;
+  color: #1f0f08;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 2px solid #5a3416;
+  font-size: 0.82rem;
+  font-style: italic;
+  max-width: 220px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.8);
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.speech-bubble.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+.speech-bubble::before {
+  content: "";
+  position: absolute;
+  border-style: solid;
+  border-color: #5a3416 transparent;
+  display: block;
+  width: 0;
+  z-index: 1;
+}
+#bubble-mara {
+  left: 175px;
+  top: 10px;
+}
+#bubble-mara::before {
+  left: -12px;
+  top: 16px;
+  border-width: 8px 12px 8px 0;
+  border-color: transparent #5a3416;
+}
+#bubble-duke {
+  bottom: -46px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.85);
+}
+#bubble-duke.visible {
+  transform: translateX(-50%) scale(1);
+}
+#bubble-duke::before {
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 8px 12px 8px;
+  border-color: transparent transparent #5a3416 transparent;
+}
+#bubble-silas {
+  right: 175px;
+  top: 10px;
+}
+#bubble-silas::before {
+  right: -12px;
+  top: 16px;
+  border-width: 8px 0 8px 12px;
+  border-color: transparent transparent transparent #5a3416;
+}
+
+/* AI Cards in play (face down or revealed) */
+.ai-cards-fan {
+  display: flex;
+  margin-top: 6px;
+  gap: 4px;
+  perspective: 600px;
+}
+.ai-card-shell {
+  width: 32px;
+  height: 46px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ai-card-shell.flipped {
+  transform: rotateY(180deg);
+}
+
+/* Eliminated Dead Man Style */
+.player-seat.eliminated .player-plaque {
+  filter: grayscale(100%) brightness(0.6);
+  border-color: #444;
+}
+.player-seat.eliminated .player-portrait-wrap {
+  border-color: #333;
+}
+.dead-man-stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-18deg) scale(0);
+  border: 3px solid #b31010;
+  color: #b31010;
+  padding: 4px 10px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  background: rgba(0,0,0,0.85);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.9);
+  pointer-events: none;
+  z-index: 30;
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.player-seat.eliminated .dead-man-stamp {
+  transform: translate(-50%, -50%) rotate(-18deg) scale(1);
+}
+
+/* ============================================================
+   CARDS RENDERING (PARCHMENT, SKULL & WEAPONS BACK)
+   ============================================================ */
+.saloon-card {
+  width: 64px;
+  height: 92px;
+  border-radius: 6px;
+  position: relative;
+  transform-style: preserve-3d;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.65);
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Card faces */
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 5px;
+}
+
+/* Card Back: Ornate Skull & Pistols */
+.card-back {
+  background: #2b140b;
+  border: 2px solid #b48545;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-back-pattern {
+  width: 90%;
+  height: 92%;
+  border: 1px solid #7d5224;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, #3d1c10 0%, #1a0b06 100%);
+}
+
+/* Card Front: Aged Parchment with Ornate Ranks */
+.card-front {
+  background: #f4e8cc;
+  border: 2px solid #8d6235;
+  transform: rotateY(180deg);
+  color: #1a0f07;
+  box-shadow: inset 0 0 10px rgba(130, 80, 30, 0.25);
+}
+.card-front.red-suit {
+  color: #9c1515;
+}
+.card-corner-rank {
+  font-size: 1.1rem;
+  font-weight: bold;
+  line-height: 1;
+}
+.card-center-symbol {
+  font-size: 1.8rem;
+  align-self: center;
+  line-height: 1;
+}
+.card-corner-bottom {
+  transform: rotate(180deg);
+  align-self: flex-end;
+}
+
+/* Card Glow for Matching Bet Rank on Reveal */
+.saloon-card.matching-glow .card-front,
+.ai-card-shell.matching-glow .card-front {
+  box-shadow: 0 0 20px #ffd700, inset 0 0 12px #ffec8b;
+  border-color: #ffd700;
+  animation: goldPulse 1s infinite alternate;
+}
+
+@keyframes goldPulse {
+  0% { filter: drop-shadow(0 0 4px #ffd700); }
+  100% { filter: drop-shadow(0 0 16px #ffae00); }
+}
+
+/* Human Hand Fan at bottom */
+#human-hand-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  margin-bottom: 8px;
+  perspective: 800px;
+  height: 104px;
+}
+.human-hand-card {
+  margin: 0 -8px;
+  transition: transform 0.2s ease, margin 0.2s ease, z-index 0.2s ease;
+}
+.human-hand-card:hover {
+  transform: translateY(-24px) scale(1.1) !important;
+  z-index: 40 !important;
+  box-shadow: 0 14px 28px rgba(0,0,0,0.9);
+}
+
+/* ============================================================
+   BET & RAISE CONTROLS CONSOLE (WOODEN SIGN / CHALKBOARD)
+   ============================================================ */
+#bet-console {
+  background: linear-gradient(180deg, #382112 0%, #1e0f07 100%);
+  border: 2px solid #8e5e32;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 -4px 18px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.console-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.selector-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.selector-label {
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  color: #cca46e;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.pick-btn {
+  background: linear-gradient(180deg, #4d2b16 0%, #291509 100%);
+  border: 1px solid #7c4c23;
+  color: #eed6aa;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+  min-width: 36px;
+  min-height: 36px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.pick-btn:hover:not(:disabled) {
+  border-color: #e5a458;
+  color: #fff;
+  background: linear-gradient(180deg, #64371b 0%, #3a1e0d 100%);
+}
+.pick-btn.selected {
+  background: linear-gradient(180deg, #c58739 0%, #7d4915 100%);
+  border-color: #ffd480;
+  color: #1b0a02;
+  box-shadow: 0 0 8px rgba(255, 200, 60, 0.7);
+  transform: translateY(-1px);
+}
+.pick-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: #402311;
+  background: #180b05;
+}
+
+/* Action Buttons: RAISE & LIAR */
+.action-buttons-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#btn-raise {
+  flex: 1;
+  background: linear-gradient(180deg, #875421 0%, #4a280e 100%);
+  border: 2px solid #e0a353;
+  color: #ffeed0;
+  font-size: 1.05rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.3);
+  min-height: 44px;
+}
+#btn-raise:hover:not(:disabled) {
+  background: linear-gradient(180deg, #a66929 0%, #5d3413 100%);
+  box-shadow: 0 0 14px rgba(255, 175, 50, 0.5);
+}
+#btn-raise:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(60%);
+}
+
+#btn-call-liar {
+  flex: 1;
+  background: linear-gradient(180deg, #9e1a1a 0%, #540b0b 100%);
+  border: 2px solid #ea4343;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 2.5px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.3);
+  text-shadow: 1px 1px 2px #000;
+  min-height: 44px;
+}
+#btn-call-liar:hover:not(:disabled) {
+  background: linear-gradient(180deg, #bd2121 0%, #6d0f0f 100%);
+  box-shadow: 0 0 18px rgba(255, 40, 40, 0.7);
+  transform: translateY(-1px);
+}
+#btn-call-liar:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(60%);
+}
+
+/* ============================================================
+   TELEGRAM STRIP EVENT LOG (TORN TELEGRAPH)
+   ============================================================ */
+#saloon-telegram-strip {
+  position: absolute;
+  top: 56px;
+  right: 16px;
+  width: 250px;
+  max-height: 180px;
+  background: #eddab2;
+  color: #2b170c;
+  border: 1px solid #94693a;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.85), inset 0 0 15px rgba(140, 90, 40, 0.25);
+  display: flex;
+  flex-direction: column;
+  z-index: 25;
+  overflow: hidden;
+  font-family: "Courier New", monospace;
+  font-size: 0.76rem;
+}
+.telegram-header {
+  background: #3c2010;
+  color: #eed6aa;
+  padding: 4px 8px;
+  font-size: 0.68rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.telegram-body {
+  padding: 6px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 150px;
+}
+.telegram-body::-webkit-scrollbar {
+  width: 4px;
+}
+.telegram-body::-webkit-scrollbar-thumb {
+  background: #94693a;
+  border-radius: 2px;
+}
+.telegram-entry {
+  line-height: 1.25;
+  border-bottom: 1px dashed rgba(100, 60, 20, 0.2);
+  padding-bottom: 3px;
+}
+.telegram-entry.highlight {
+  font-weight: bold;
+  color: #8c1010;
+}
+
+/* ============================================================
+   MODALS: HOW TO PLAY, TITLE SCREEN, VICTORY/DEFEAT
+   ============================================================ */
+.saloon-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 5, 2, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+.saloon-modal-backdrop.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.parchment-scroll {
+  position: relative;
+  background: #f1e2c1;
+  color: #2a160b;
+  border: 4px solid #7a4d25;
+  border-radius: 8px;
+  padding: 24px 30px;
+  max-width: 580px;
+  width: 100%;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.95), inset 0 0 30px rgba(120, 70, 30, 0.3);
+  text-align: center;
+}
+.scroll-wood-ornament {
+  font-size: 0.85rem;
+  letter-spacing: 4px;
+  color: #8a572a;
+  margin-bottom: 8px;
+}
+.scroll-title {
+  font-size: 2.2rem;
+  letter-spacing: 3px;
+  color: #1f0d06;
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.4);
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+.scroll-subtitle {
+  font-size: 1rem;
+  font-style: italic;
+  color: #643916;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #8c5a2c;
+  padding-bottom: 8px;
+}
+.scroll-content {
+  text-align: left;
+  line-height: 1.5;
+  font-size: 0.9rem;
+  color: #2b170c;
+  margin-bottom: 18px;
+}
+.scroll-content p {
+  margin-bottom: 10px;
+}
+.scroll-content strong {
+  color: #7d1919;
+}
+
+/* Bang Slam Text Overlay */
+#bang-slam {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0) rotate(-15deg);
+  font-size: 4.8rem;
+  font-weight: 900;
+  color: #ff2222;
+  text-shadow: 4px 4px 0 #000, 0 0 30px rgba(255, 30, 30, 0.9);
+  letter-spacing: 4px;
+  pointer-events: none;
+  z-index: 150;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#bang-slam.slamming {
+  transform: translate(-50%, -50%) scale(1.1) rotate(-12deg);
+}
+
+/* Victory Banner Flare */
+.victory-banner {
+  font-size: 2.3rem;
+  color: #ffcf40;
+  text-shadow: 2px 2px 0 #000, 0 0 20px #ffae00;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+
+/* ============================================================
+   RESPONSIVE LAYOUT (PHONE 390x844 & TABLET)
+   ============================================================ */
+@media (max-width: 900px) {
+  #saloon-telegram-strip {
+    width: 200px;
+    max-height: 120px;
+    top: 52px;
+    right: 8px;
+  }
+  #seat-mara { left: 4px; width: 140px; }
+  #seat-silas { right: 4px; width: 140px; }
+  .player-portrait-wrap { width: 50px; height: 50px; }
+  .player-name { font-size: 0.82rem; }
+  .saloon-card { width: 52px; height: 76px; }
+}
+
+@media (max-width: 600px) {
+  #saloon-header { height: 44px; padding: 0 10px; }
+  .brand-title { font-size: 1rem; }
+  #poker-table { border-radius: 80px; border-width: 10px; }
+  #seat-mara { left: 2px; top: 40%; width: 110px; }
+  #seat-silas { right: 2px; top: 40%; width: 110px; }
+  #seat-duke { top: 6px; width: 160px; }
+  #saloon-telegram-strip { display: none; }
+  .saloon-card { width: 44px; height: 64px; }
+  #human-hand-container { height: 76px; }
+  .pick-btn { min-width: 32px; min-height: 32px; font-size: 0.85rem; padding: 3px 6px; }
+  #btn-raise, #btn-call-liar { font-size: 0.9rem; min-height: 44px; }
+}
+</style>
+</head>
+<body>
+
+<div id="saloon-viewport">
+  <div class="lantern-glow lantern-left"></div>
+  <div class="lantern-glow lantern-right"></div>
+  <div class="saloon-decor longhorn-skull">
+    <svg viewBox="0 0 140 50" width="100%" height="100%">
+      <!-- Steer Horns & Skull -->
+      <path d="M70 30 Q35 15 5 5 Q35 25 65 34 Z" fill="#cfba99"/>
+      <path d="M70 30 Q105 15 135 5 Q105 25 75 34 Z" fill="#cfba99"/>
+      <polygon points="65,26 75,26 73,46 67,46" fill="#e5d4bc"/>
+      <circle cx="68" cy="32" r="1.5" fill="#221108"/>
+      <circle cx="72" cy="32" r="1.5" fill="#221108"/>
+    </svg>
+  </div>
+  <div class="saloon-decor swinging-doors">
+    <div class="door-leaf"></div>
+    <div class="door-leaf" style="transform: scaleX(-1);"></div>
+  </div>
+
+  <canvas id="dust-canvas"></canvas>
+  <div id="gunshot-flash"></div>
+  <div id="bang-slam">BANG!</div>
+
+  <!-- Table Stage with screen shake capability -->
+  <div id="table-stage">
+    
+    <!-- Saloon Top Header -->
+    <header id="saloon-header">
+      <div class="brand-badge">
+        <span class="brand-title">☠ DEAD MAN'S BLUFF</span>
+        <span class="round-badge" id="round-counter-badge">ROUND 1</span>
+      </div>
+      <div class="header-controls">
+        <button id="btn-sound-toggle" class="wood-btn" title="Toggle Saloon Sounds">🔇 SOUND: OFF</button>
+        <button id="btn-speed-toggle" class="wood-btn" title="Toggle Animation Speed">⏳ NORMAL</button>
+        <button id="btn-rules-open" class="wood-btn">📜 RULES</button>
+      </div>
+    </header>
+
+    <!-- Main Saloon Arena -->
+    <main id="saloon-arena">
+      
+      <!-- Top-Down Angled Poker Table -->
+      <div id="poker-table">
+        <div class="whiskey-stain stain-1"></div>
+        <div class="whiskey-stain stain-2"></div>
+
+        <!-- Center Pot, Dealer Stack, and Nailed Wanted Poster -->
+        <div id="table-center">
+          <div id="dealer-deck-spot">
+            <div class="deck-card-stack" title="24-Card Saloon Deck (4 of each A, K, Q, J, 10, 9)">
+              <span style="font-size:1.4rem; color:#eeddbb;">🂠</span>
+            </div>
+          </div>
+          
+          <div id="bet-wanted-poster">
+            <div class="poster-header">CURRENT BOUNTY &amp; BET</div>
+            <div class="poster-bet-value" id="current-bet-display">
+              <span>NO BET YET</span>
+            </div>
+            <div class="poster-bettor" id="current-bettor-display">Awaiting opening wager...</div>
+          </div>
+
+          <div id="table-pot">
+            <span class="bullet-icon"></span>
+            <span class="pot-text" id="pot-cards-count">20 CARDS IN PLAY</span>
+          </div>
+        </div>
+
+        <!-- Player 1: Mara "The Mathematician" (Left) -->
+        <div id="seat-mara" class="player-seat">
+          <div class="thinking-bubble" id="thinking-mara">
+            <span>CALCULATING</span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+          </div>
+          <div class="speech-bubble" id="bubble-mara"></div>
+          <div class="player-plaque">
+            <div class="dead-man-stamp">DEAD MAN</div>
+            <div class="player-portrait-wrap" id="portrait-mara">
+              <!-- SVG Portrait Mara -->
+              <svg viewBox="0 0 100 100" width="100%" height="100%">
+                <circle cx="50" cy="50" r="50" fill="#2d4233"/>
+                <circle cx="50" cy="38" r="22" fill="#5c2c16"/>
+                <circle cx="50" cy="20" r="11" fill="#461f0e"/>
+                <ellipse cx="50" cy="46" r="16" fill="#f2cbab"/>
+                <path d="M25 85 Q50 68 75 85 L75 100 L25 100 Z" fill="#1b4d32"/>
+                <path d="M42 66 L50 78 L58 66 Z" fill="#fff"/>
+                <circle cx="43" cy="44" r="5.5" fill="none" stroke="#d4af37" stroke-width="2"/>
+                <circle cx="57" cy="44" r="5.5" fill="none" stroke="#d4af37" stroke-width="2"/>
+                <line x1="48.5" y1="44" x2="51.5" y2="44" stroke="#d4af37" stroke-width="2"/>
+                <line x1="32" y1="18" x2="65" y2="30" stroke="#f39c12" stroke-width="2.5"/>
+              </svg>
+            </div>
+            <div class="player-name-row">
+              <span class="player-name">Mara</span>
+            </div>
+            <span class="player-title">The Odds Maker</span>
+            <div class="plaque-stats">
+              <div class="mini-cards-holder" id="cards-mini-mara"></div>
+              <div class="bullet-chamber" id="chamber-mara"></div>
+            </div>
+          </div>
+          <div class="ai-cards-fan" id="cards-fan-mara"></div>
+        </div>
+
+        <!-- Player 2: Duke "Hot Lead" (Top) -->
+        <div id="seat-duke" class="player-seat">
+          <div class="thinking-bubble" id="thinking-duke">
+            <span>FUMING</span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+          </div>
+          <div class="speech-bubble" id="bubble-duke"></div>
+          <div class="player-plaque">
+            <div class="dead-man-stamp">DEAD MAN</div>
+            <div class="player-portrait-wrap" id="portrait-duke">
+              <!-- SVG Portrait Duke -->
+              <svg viewBox="0 0 100 100" width="100%" height="100%">
+                <circle cx="50" cy="50" r="50" fill="#4d1e15"/>
+                <path d="M20 90 Q50 68 80 90 L80 100 L20 100 Z" fill="#523927"/>
+                <path d="M36 68 L50 86 L64 68 Z" fill="#a82318"/>
+                <ellipse cx="50" cy="48" r="17" fill="#dfad88"/>
+                <line x1="40" y1="40" x2="45" y2="55" stroke="#7e2e28" stroke-width="2"/>
+                <ellipse cx="43" cy="46" r="2" fill="#221"/>
+                <ellipse cx="57" cy="46" r="2" fill="#221"/>
+                <rect x="52" y="54" width="16" height="4" rx="1" fill="#6e4526" transform="rotate(12 52 54)"/>
+                <circle cx="68" cy="58" r="2.5" fill="#ff3b00"/>
+                <ellipse cx="50" cy="32" r="32" ry="10" fill="#291b12"/>
+                <path d="M30 30 C32 12 68 12 70 30 Z" fill="#3a271c"/>
+              </svg>
+            </div>
+            <div class="player-name-row">
+              <span class="player-name">Duke</span>
+            </div>
+            <span class="player-title">Hot Lead Gunslinger</span>
+            <div class="plaque-stats">
+              <div class="mini-cards-holder" id="cards-mini-duke"></div>
+              <div class="bullet-chamber" id="chamber-duke"></div>
+            </div>
+          </div>
+          <div class="ai-cards-fan" id="cards-fan-duke"></div>
+        </div>
+
+        <!-- Player 3: Silas "The Undertaker" (Right) -->
+        <div id="seat-silas" class="player-seat">
+          <div class="thinking-bubble" id="thinking-silas">
+            <span>MEASURING</span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+          </div>
+          <div class="speech-bubble" id="bubble-silas"></div>
+          <div class="player-plaque">
+            <div class="dead-man-stamp">DEAD MAN</div>
+            <div class="player-portrait-wrap" id="portrait-silas">
+              <!-- SVG Portrait Silas -->
+              <svg viewBox="0 0 100 100" width="100%" height="100%">
+                <circle cx="50" cy="50" r="50" fill="#1c1c1f"/>
+                <path d="M22 88 Q50 68 78 88 L78 100 L22 100 Z" fill="#111114"/>
+                <line x1="50" y1="68" x2="50" y2="92" stroke="#silver" stroke-width="2"/>
+                <circle cx="50" cy="74" r="3.5" fill="#dcdcdc"/>
+                <ellipse cx="50" cy="48" r="15" fill="#d8c5b2"/>
+                <ellipse cx="43" cy="47" r="2" fill="#111"/>
+                <path d="M52 44 L62 50 L56 54 Z" fill="#111"/>
+                <line x1="38" y1="40" x2="65" y2="52" stroke="#111" stroke-width="1.5"/>
+                <ellipse cx="50" cy="34" r="26" ry="7" fill="#151518"/>
+                <rect x="34" y="8" width="32" height="26" fill="#1d1d22"/>
+                <rect x="34" y="28" width="32" height="4" fill="#691212"/>
+              </svg>
+            </div>
+            <div class="player-name-row">
+              <span class="player-name">Silas</span>
+            </div>
+            <span class="player-title">The Undertaker</span>
+            <div class="plaque-stats">
+              <div class="mini-cards-holder" id="cards-mini-silas"></div>
+              <div class="bullet-chamber" id="chamber-silas"></div>
+            </div>
+          </div>
+          <div class="ai-cards-fan" id="cards-fan-silas"></div>
+        </div>
+
+        <!-- Player 0: You (The Stranger) at Bottom -->
+        <div id="seat-human" class="player-seat">
+          <div class="speech-bubble" id="bubble-human" style="bottom: 110px;"></div>
+          
+          <!-- Human Fanned Cards -->
+          <div id="human-hand-container"></div>
+
+          <!-- Human Bet Console -->
+          <div id="bet-console">
+            
+            <!-- Selector Row: Count & Rank -->
+            <div class="console-row">
+              <div class="selector-group">
+                <span class="selector-label">Count:</span>
+                <button class="pick-btn count-btn" data-count="1">1</button>
+                <button class="pick-btn count-btn" data-count="2">2</button>
+                <button class="pick-btn count-btn" data-count="3">3</button>
+                <button class="pick-btn count-btn" data-count="4">4</button>
+              </div>
+
+              <div class="selector-group">
+                <span class="selector-label">Rank:</span>
+                <button class="pick-btn rank-btn" data-rank="9">9</button>
+                <button class="pick-btn rank-btn" data-rank="10">10</button>
+                <button class="pick-btn rank-btn" data-rank="J">J</button>
+                <button class="pick-btn rank-btn" data-rank="Q">Q</button>
+                <button class="pick-btn rank-btn" data-rank="K">K</button>
+                <button class="pick-btn rank-btn" data-rank="A">A</button>
+              </div>
+            </div>
+
+            <!-- Action Row: Raise vs Call Liar -->
+            <div class="console-row action-buttons-wrap">
+              <button id="btn-raise" disabled>RAISE BET</button>
+              <button id="btn-call-liar" disabled>☠ CALL LIAR!</button>
+            </div>
+
+          </div>
+
+          <!-- Bottom Plaque for Human -->
+          <div class="player-plaque" style="margin-top: 6px; padding: 4px 12px; flex-direction: row; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="player-name" style="font-size: 0.85rem;">YOU</span>
+              <span class="player-title" style="margin: 0;">(The Stranger)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div class="mini-cards-holder" id="cards-mini-human"></div>
+              <div class="bullet-chamber" id="chamber-human"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Telegram Strip Event Log -->
+      <div id="saloon-telegram-strip">
+        <div class="telegram-header">
+          <span>WESTERN DISPATCH</span>
+          <span style="font-size:0.6rem;">1881 TER.</span>
+        </div>
+        <div class="telegram-body" id="telegram-body">
+          <div class="telegram-entry">Welcome to Dead Man's Bluff. Everyone lies.</div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- TITLE SCREEN MODAL -->
+  <div id="modal-title" class="saloon-modal-backdrop">
+    <div class="parchment-scroll">
+      <div class="scroll-wood-ornament">════ ☠ SALOON OF NO RETURN ☠ ════</div>
+      <h1 class="scroll-title">DEAD MAN'S BLUFF</h1>
+      <p class="scroll-subtitle">"Everyone at this table is lying. Including you."</p>
+      
+      <div class="scroll-content">
+        <p>Four gunslingers sit around a blood-stained green felt table in 1881 frontier territory. A 24-card deck. Hidden hands. Audacious wagers on what lies across the table.</p>
+        <p>Raise the count, bid higher rank, or call <strong>LIAR!</strong> Caught bluffs and false accusations carry a permanent toll: two cards shot away forever. The last gambler standing takes the pot.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+        <button id="btn-title-start" class="wood-btn" style="padding: 12px 24px; font-size: 1.1rem; justify-content: center;">
+          🔫 TAKE A SEAT AT THE TABLE
+        </button>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button id="btn-title-rules" class="wood-btn" style="flex: 1; justify-content: center;">📜 HOW TO PLAY</button>
+          <button id="btn-title-sim" class="wood-btn" style="flex: 1; justify-content: center;">⚙️ RUN 200 SIM GAMES</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY RULES MODAL -->
+  <div id="modal-rules" class="saloon-modal-backdrop hidden">
+    <div class="parchment-scroll">
+      <div class="scroll-wood-ornament">════ 📜 RULES OF THE SALOON 📜 ════</div>
+      <h2 class="scroll-title" style="font-size: 1.8rem;">THE LIAR'S CODE</h2>
+      <p class="scroll-subtitle">Read close, stranger. Ignorance gets you buried.</p>
+      
+      <div class="scroll-content">
+        <p><strong>1. THE DECK:</strong> 24 cards: 4 each of <strong>A, K, Q, J, 10, 9</strong>. Rank order: A &gt; K &gt; Q &gt; J &gt; 10 &gt; 9. Each player begins with 5 cards dealt face down.</p>
+        <p><strong>2. THE BET:</strong> In turn, bid: <em>"At least N cards of rank R exist across ALL hands."</em> You may speak truth or bluff.</p>
+        <p><strong>3. THE RAISE:</strong> Next player clockwise must <strong>RAISE</strong> (higher count of any rank, or same count of a higher rank) or <strong>CALL LIAR</strong>.</p>
+        <p><strong>4. THE SHOWDOWN:</strong> On a call, all hands flip. If the bet was true, the <strong>caller loses 2 cards</strong>. If false, the <strong>bettor loses 2 cards</strong>. Lost cards are gone for good!</p>
+        <p><strong>5. SURVIVAL:</strong> The round loser starts the next round. Reach 0 cards and you're dead. Last player standing wins.</p>
+      </div>
+
+      <button id="btn-rules-close" class="wood-btn" style="padding: 10px 24px; font-size: 1rem; margin: 0 auto;">
+        UNDERSTOOD. BACK TO THE GAME
+      </button>
+    </div>
+  </div>
+
+  <!-- VICTORY / DEFEAT MODAL -->
+  <div id="modal-gameover" class="saloon-modal-backdrop hidden">
+    <div class="parchment-scroll">
+      <div class="scroll-wood-ornament" id="gameover-ornament">════ ☠ HIGH NOON FINAL REPORT ☠ ════</div>
+      <div id="gameover-title" class="victory-banner">LAST ONE STANDING</div>
+      <p id="gameover-subtitle" class="scroll-subtitle">The smoke clears over an empty saloon.</p>
+      
+      <div class="scroll-content" id="gameover-stats">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+        <button id="btn-rematch" class="wood-btn" style="padding: 12px 24px; font-size: 1rem;">
+          🔄 DEAL AGAIN (REMATCH)
+        </button>
+        <button id="btn-back-title" class="wood-btn" style="padding: 12px 24px; font-size: 1rem;">
+          🚪 SALOON DOORS (TITLE)
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     VANILLA JAVASCRIPT: SOUND ENGINE, AI PERSONAS, GAME LOGIC
+     ============================================================ */ -->
+<script>
+(function() {
+  'use strict';
+
+  // Constants
+  const RANKS = ['9', '10', 'J', 'Q', 'K', 'A'];
+  const RANK_VAL = { '9': 0, '10': 1, 'J': 2, 'Q': 3, 'K': 4, 'A': 5 };
+  const SUITS = ['♠', '♥', '♦', '♣'];
+
+  /* ============================================================
+     PROCEDURAL WEBAUDIO SOUND ENGINE (NO EXTERNAL ASSETS)
+     ============================================================ */
+  let audioCtx = null;
+  let isMuted = true; // Default to muted per instructions
+
+  function initAudio() {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        audioCtx = new AudioContext();
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function playTone(freq, duration, type = 'sine', gainVal = 0.15) {
+    if (isMuted || !audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+  }
+
+  function playCardFlick() {
+    if (isMuted || !audioCtx) return;
+    try {
+      const bufferSize = audioCtx.sampleRate * 0.05;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1400;
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      noise.start();
+    } catch(e) {}
+  }
+
+  function playWoodThud() {
+    if (isMuted || !audioCtx) return;
+    try {
+      playTone(110, 0.12, 'triangle', 0.25);
+    } catch(e) {}
+  }
+
+  function playGunshot() {
+    if (isMuted || !audioCtx) return;
+    try {
+      const bufferSize = Math.floor(audioCtx.sampleRate * 0.45);
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.08));
+      }
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(3200, audioCtx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.35);
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.65, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      noise.start();
+
+      playTone(75, 0.3, 'sine', 0.5);
+    } catch(e) {}
+  }
+
+  function playDeathBell() {
+    if (isMuted || !audioCtx) return;
+    try {
+      [220, 440, 660].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.18 / (i + 1), audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.8);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 1.8);
+      });
+    } catch(e) {}
+  }
+
+  function playWinChime() {
+    if (isMuted || !audioCtx) return;
+    try {
+      [330, 440, 554, 659].forEach((freq, idx) => {
+        setTimeout(() => playTone(freq, 0.4, 'triangle', 0.2), idx * 120);
+      });
+    } catch(e) {}
+  }
+
+  /* ============================================================
+     VOICE LINES (8+ PER SITUATION, TRACKED TO PREVENT REPEATS)
+     ============================================================ */
+  const DIALOGUES = {
+    mara: {
+      raising: [
+        "The distribution favors this.",
+        "A calculated variance. Nothing more.",
+        "The binomial expansion yields a favorable spread.",
+        "By my reckoning, the deck holds plenty.",
+        "Pencil doesn't lie, gentlemen.",
+        "Odds lean right into this pocket.",
+        "Statistically speaking, you're looking at the inevitable.",
+        "A 72 percent confidence interval. I'll take it."
+      ],
+      calling: [
+        "Mathematically impossible. You're lying.",
+        "The variance does not permit such a claim.",
+        "Four cards in play and you claim that? Liar.",
+        "Your bluff is outside three standard deviations.",
+        "I've counted every scrap on this felt. Liar!",
+        "The numbers have closed your account, friend.",
+        "Pure fabrication. Flip your hand.",
+        "Gambler's fallacy caught up with you. Call!"
+      ],
+      caught_lying: [
+        "A minor rounding error in my calculus.",
+        "The variance was sharper than anticipated.",
+        "Even Laplace misjudged a tail event.",
+        "A calculated sacrifice that failed to yield.",
+        "Hmm. A rare statistical anomaly.",
+        "The unseen pool was skewed against me.",
+        "An acceptable loss in the long run.",
+        "Curious. My model did not foresee that draw."
+      ],
+      caught_calling_wrong: [
+        "An improbable confluence of cards.",
+        "A five-sigma event... how infuriating.",
+        "The deck defied the standard distribution.",
+        "Confound it, the odds were heavily against that.",
+        "Remarkable luck. Nothing more than raw noise.",
+        "I misgauged the concentration in the pool.",
+        "A statistical fluke, I assure you.",
+        "Credit where due: the outliers came home."
+      ],
+      losing_cards: [
+        "Two cards subtracted from my ledger.",
+        "My margin of error just narrowed.",
+        "A costly miscalculation.",
+        "The denominator shrinks. Adapt.",
+        "My reserves are wearing thin.",
+        "Down two, but my formula remains sound.",
+        "A temporary drawdown.",
+        "The house always exacts a toll."
+      ],
+      eliminated: [
+        "Zero remaining. My equation terminates.",
+        "The law of large numbers finally claimed me.",
+        "My ledger closes today.",
+        "Bankrupt of probabilities.",
+        "A cold mathematical certainty: I am out.",
+        "The final sum is drawn in red ink.",
+        "I tip my hat to the variance.",
+        "A quiet end to a noisy distribution."
+      ],
+      winning: [
+        "Q.E.D. The numbers never deceive.",
+        "Probability always wins in the end.",
+        "A clean triumph of rational calculus.",
+        "You cannot out-gamble the laws of mathematics.",
+        "Every card accounted for. Good day, gentlemen.",
+        "A textbook demonstration of expected value.",
+        "Order restored to the frontier.",
+        "The house of reason claims the pot."
+      ]
+    },
+    duke: {
+      raising: [
+        "I'm pushing this wagon off the cliff! Raise!",
+        "You boys got cold feet? Smell this powder!",
+        "Ain't no half-measures with Hot Lead!",
+        "I'll double down till hell freezes over!",
+        "Stack 'em high and watch 'em weep!",
+        "You want lead or you want cards? Raise!",
+        "Chew on that, you yellow-bellies!",
+        "I play to bleed the table dry!"
+      ],
+      calling: [
+        "Liar! Pull your iron, coward!",
+        "You're full of spit and vinegar! LIAR!",
+        "Bull! That's a pack of rotten lies!",
+        "Not while I'm breathing! Show them cards!",
+        "You're bluffing a dead man's grave! LIAR!",
+        "I smell coyote dung on that bet! LIAR!",
+        "Call! Let's see you squirm like a rattler!",
+        "You picked the wrong saloon to run a bluff!"
+      ],
+      caught_lying: [
+        "Bah! A man's gotta take his shots!",
+        "So what? My pistol don't bluff!",
+        "Caught me red-handed, you slippery dogs!",
+        "Damn your eyes, I almost had you!",
+        "A scratch! Just a damn flesh wound!",
+        "Laughed right into your trap, didn't I?",
+        "Next time I pull iron instead of talking!",
+        "You got lucky, partner. Plain dumb luck!"
+      ],
+      caught_calling_wrong: [
+        "You dirty snake, you actually had 'em!",
+        "Ain't no way! The deck was stacked!",
+        "Bah! My trigger finger jumped the gun!",
+        "Curse my temper! You held the iron!",
+        "I should've smelled that trap a mile away!",
+        "Burn my hide! You weren't bluffin'!",
+        "I'll shoot the next man who grins at me!",
+        "Take your damned cards, I'll take your hide!"
+      ],
+      losing_cards: [
+        "Two cards blown to kindling!",
+        "They shot two right out of my belt!",
+        "Chipped my armor, that's all!",
+        "Down two bullets, but I got plenty of lead!",
+        "You'll pay in whiskey and blood for those!",
+        "Grip just got tighter on the reins!",
+        "I've fought through worse in Dodge City!",
+        "Just two cards? I can win with my bare teeth!"
+      ],
+      eliminated: [
+        "Empty chambers! You got me, bastards!",
+        "Dead in the dirt... damned shame.",
+        "My boots are coming off... bury me deep.",
+        "Hot Lead's finally cooled down...",
+        "Shot down at high noon... fair and square.",
+        "Tell the undertaker to bring a wide pine box.",
+        "Last bullet's spent. See y'all in hell.",
+        "You haven't seen the last of Duke..."
+      ],
+      winning: [
+        "HA! The whole damn frontier is MINE!",
+        "Hot Lead takes the purse and the saloon!",
+        "Who's holding the iron now, boys?!",
+        "Drink up on Duke's tab! I own this town!",
+        "Last man standing! Always said I would!",
+        "Never cross a man with a burning fuse!",
+        "Gold, bullets, and glory! All mine!",
+        "Wipe that soot off your eyes—Duke wins!"
+      ]
+    },
+    silas: {
+      raising: [
+        "The grave accepts another offering.",
+        "Digging the trench two inches deeper.",
+        "Pine is cheap. Your lives are cheaper.",
+        "A steady hand on a cold spade.",
+        "The hearse is rolling up to the porch.",
+        "Another notch on the walnut handle.",
+        "The shadow lengthens across this felt.",
+        "Time waits for no gambler."
+      ],
+      calling: [
+        "Your time has expired. Liar.",
+        "I see the hollow in your eyes. Liar.",
+        "The spade drops now. Show your hand.",
+        "You've spoken your own eulogy. Liar.",
+        "Dust returns to dust. Call.",
+        "A falsehood won't save you from six feet under.",
+        "I call your bluff into the cold ground.",
+        "The bell tolls for that lie."
+      ],
+      caught_lying: [
+        "Even the gravedigger occasionally misjudges.",
+        "A misplaced tombstone. It happens.",
+        "A premature burial of my own design.",
+        "The spade struck stone.",
+        "The shadow shifts. A quiet setback.",
+        "I walk away from this grave. For now.",
+        "A notch carved on the wrong side.",
+        "The earth rejects this particular corpse."
+      ],
+      caught_calling_wrong: [
+        "You carry true iron. My mistake.",
+        "The deceased was not yet ready.",
+        "A genuine article. Rare in this desert.",
+        "The rope snapped. You live a little longer.",
+        "I read the epitaph too early.",
+        "Quiet courage. I respect that.",
+        "You held what you claimed. How grim.",
+        "The bell tolled for me this turn."
+      ],
+      losing_cards: [
+        "Two boards removed from my coffin.",
+        "A shallow breath. Two cards surrender.",
+        "The dirt falls closer to my chin.",
+        "Loss is merely an interim state.",
+        "Two measures taken in black cloth.",
+        "The cold creeps two steps inward.",
+        "Pain is irrelevant. The spade remains.",
+        "Two cards gone. The final count approaches."
+      ],
+      eliminated: [
+        "My plot is ready. Lower the ropes.",
+        "Six feet of cool dirt. Finally, peace.",
+        "The undertaker takes his own measurement.",
+        "The spade rests at last.",
+        "No tears. Just pine and prairie wind.",
+        "My vigil ends at this table.",
+        "The cemetery has room for all of us.",
+        "Dust to dust. The game is yours."
+      ],
+      winning: [
+        "Silence. The final grave is filled.",
+        "Only the undertaker walks out into the dawn.",
+        "I told you: the spade always wins.",
+        "Every coffin accounted for and occupied.",
+        "A quiet prairie wind over an empty saloon.",
+        "Your markers belong to the chapel now.",
+        "The last service is concluded.",
+        "Rest in peace, gentlemen."
+      ]
+    }
+  };
+
+  const lastSpoken = { mara: '', duke: '', silas: '', human: '' };
+
+  function getDialogue(personaKey, situation) {
+    const list = (DIALOGUES[personaKey] && DIALOGUES[personaKey][situation]) || [];
+    if (list.length === 0) return "...";
+    const last = lastSpoken[personaKey];
+    const available = list.filter(line => line !== last);
+    const chosen = available[Math.floor(Math.random() * available.length)] || list[0];
+    lastSpoken[personaKey] = chosen;
+    return chosen;
+  }
+
+  /* ============================================================
+     COMBINATORICS & HYPERGEOMETRIC PROBABILITY (AI FAIRNESS)
+     ============================================================ */
+  function nCr(n, r) {
+    if (r < 0 || r > n) return 0;
+    if (r === 0 || r === n) return 1;
+    let c = 1;
+    for (let i = 1; i <= r; i++) {
+      c = (c * (n - (i - 1))) / i;
+    }
+    return c;
+  }
+
+  function probAtLeast(needed, kInHand, handSize, totalOthersCards) {
+    if (needed <= 0) return 1.0;
+    const remainingInDeckPool = 24 - handSize;
+    const targetCardsInPool = 4 - kInHand;
+    if (targetCardsInPool < needed) return 0.0;
+    if (totalOthersCards < needed) return 0.0;
+
+    const totalCombs = nCr(remainingInDeckPool, totalOthersCards);
+    if (totalCombs <= 0) return 0.0;
+
+    let prob = 0;
+    const maxPossible = Math.min(targetCardsInPool, totalOthersCards);
+    for (let x = needed; x <= maxPossible; x++) {
+      const favorable = nCr(targetCardsInPool, x) * nCr(remainingInDeckPool - targetCardsInPool, totalOthersCards - x);
+      prob += favorable / totalCombs;
+    }
+    return Math.min(1.0, Math.max(0.0, prob));
+  }
+
+  /* ============================================================
+     GAME STATE OBJECT (ONE CENTRAL OBJECT)
+     ============================================================ */
+  const GameState = {
+    round: 1,
+    turnIndex: 0,
+    starterIndex: 0,
+    currentBet: null, // { count: N, rank: R, bettorId: 0..3 }
+    betHistory: [],
+    inRound: false,
+    skipAnimation: false,
+    selectedCount: 1,
+    selectedRank: '9',
+    players: [
+      { id: 0, key: 'human', name: 'You', title: 'The Stranger', maxCards: 5, cards: [], bluffsCaught: 0, truthfulBets: 0, callsMade: 0, callsCorrect: 0, stung: false },
+      { id: 1, key: 'mara', name: 'Mara', title: 'The Odds Maker', persona: 'mathematician', maxCards: 5, cards: [], bluffsCaught: 0, truthfulBets: 0, callsMade: 0, callsCorrect: 0, stung: false },
+      { id: 2, key: 'duke', name: 'Duke', title: 'Hot Lead Gunslinger', persona: 'hot_lead', maxCards: 5, cards: [], bluffsCaught: 0, truthfulBets: 0, callsMade: 0, callsCorrect: 0, stung: false },
+      { id: 3, key: 'silas', name: 'Silas', title: 'The Undertaker', persona: 'undertaker', maxCards: 5, cards: [], bluffsCaught: 0, truthfulBets: 0, callsMade: 0, callsCorrect: 0, stung: false },
+    ],
+    stats: {
+      roundsPlayed: 0,
+      humanBluffsAttempted: 0,
+      humanBluffsCaught: 0,
+      humanCallsMade: 0,
+      humanCallsCorrect: 0
+    }
+  };
+
+  function getActivePlayers() {
+    return GameState.players.filter(p => p.maxCards > 0);
+  }
+
+  function getTotalCardsInPlay() {
+    return getActivePlayers().reduce((sum, p) => sum + p.maxCards, 0);
+  }
+
+  function isHigherBet(newBet, currentBet) {
+    if (!currentBet) return true;
+    if (newBet.count > currentBet.count) return true;
+    if (newBet.count === currentBet.count && RANK_VAL[newBet.rank] > RANK_VAL[currentBet.rank]) return true;
+    return false;
+  }
+
+  function getLegalRaises(currentBet, totalCardsInPlay) {
+    const raises = [];
+    const maxCount = Math.min(4, totalCardsInPlay);
+    for (let c = 1; c <= maxCount; c++) {
+      for (const r of RANKS) {
+        const candidate = { count: c, rank: r };
+        if (isHigherBet(candidate, currentBet)) {
+          raises.push(candidate);
+        }
+      }
+    }
+    return raises;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function buildSaloonDeck() {
+    const deck = [];
+    for (const r of RANKS) {
+      for (let s = 0; s < 4; s++) {
+        deck.push({ rank: r, suit: SUITS[s] });
+      }
+    }
+    return shuffle(deck);
+  }
+
+  /* ============================================================
+     AI DECISION LOGIC (STRICT PRIVACY: NEVER READS OTHER HANDS)
+     ============================================================ */
+  function getAIDecision(player, currentBet, betHistory) {
+    const totalInPlay = getTotalCardsInPlay();
+    const legalRaises = getLegalRaises(currentBet, totalInPlay);
+
+    if (!currentBet) {
+      return { action: 'raise', bet: chooseAIOpeningBet(player, legalRaises) };
+    }
+
+    if (legalRaises.length === 0) {
+      return { action: 'call' };
+    }
+
+    const myRanks = player.cards.map(c => c.rank);
+    const kInHand = myRanks.filter(r => r === currentBet.rank).length;
+    const needed = currentBet.count - kInHand;
+    const othersCards = totalInPlay - player.cards.length;
+    const prob = probAtLeast(needed, kInHand, player.cards.length, othersCards);
+
+    let callThreshold = 0.35;
+    if (player.persona === 'mathematician') {
+      callThreshold = 0.33;
+    } else if (player.persona === 'hot_lead') {
+      callThreshold = player.stung ? 0.52 : 0.24;
+    } else if (player.persona === 'undertaker') {
+      callThreshold = totalInPlay <= 8 ? 0.42 : 0.28;
+    }
+
+    const bettor = GameState.players[currentBet.bettorId];
+    if (bettor) {
+      const totalBettorBets = bettor.bluffsCaught + bettor.truthfulBets;
+      if (totalBettorBets >= 2) {
+        const bluffRate = bettor.bluffsCaught / totalBettorBets;
+        if (bluffRate > 0.45) callThreshold += 0.12;
+      }
+    }
+
+    const shouldCall = (prob < callThreshold) || (needed > (4 - kInHand));
+    if (shouldCall && Math.random() < 0.94) {
+      return { action: 'call' };
+    }
+
+    const chosenRaise = chooseAIRaise(player, legalRaises, currentBet, totalInPlay);
+    return { action: 'raise', bet: chosenRaise };
+  }
+
+  function chooseAIOpeningBet(player, legalRaises) {
+    const counts = {};
+    for (const r of RANKS) counts[r] = 0;
+    for (const c of player.cards) counts[c.rank]++;
+
+    let bestRank = '9';
+    let maxC = -1;
+    for (const r of RANKS) {
+      if (counts[r] >= maxC) {
+        maxC = counts[r];
+        bestRank = r;
+      }
+    }
+
+    if (player.persona === 'hot_lead' && Math.random() < 0.4) {
+      const jumpCand = legalRaises.find(b => b.count === 2 && b.rank === 'A');
+      if (jumpCand) return jumpCand;
+    }
+
+    return legalRaises.find(b => b.count === 1 && b.rank === bestRank) || legalRaises[0];
+  }
+
+  function chooseAIRaise(player, legalRaises, currentBet, totalInPlay) {
+    const counts = {};
+    for (const r of RANKS) counts[r] = 0;
+    for (const c of player.cards) counts[c.rank]++;
+
+    if (player.persona === 'hot_lead' && Math.random() < 0.45) {
+      const jumps = legalRaises.filter(b => b.count > currentBet.count);
+      if (jumps.length > 0) {
+        return jumps[Math.floor(Math.random() * jumps.length)];
+      }
+    }
+
+    const truthRaises = legalRaises.filter(b => {
+      const inHand = counts[b.rank];
+      const needed = b.count - inHand;
+      const othersCards = totalInPlay - player.cards.length;
+      return probAtLeast(needed, inHand, player.cards.length, othersCards) >= 0.28;
+    });
+
+    if (truthRaises.length > 0) {
+      return truthRaises[0];
+    }
+
+    if (player.persona === 'undertaker' && Math.random() < 0.25) {
+      const bluffs = legalRaises.filter(b => b.count === currentBet.count + 1);
+      if (bluffs.length > 0) return bluffs[bluffs.length - 1];
+    }
+
+    return legalRaises[0];
+  }
+
+  /* ============================================================
+     UI RENDERING & ANIMATIONS
+     ============================================================ */
+  const elWantedPoster = document.getElementById('bet-wanted-poster');
+  const elBetDisplay = document.getElementById('current-bet-display');
+  const elBettorDisplay = document.getElementById('current-bettor-display');
+  const elPotCardsCount = document.getElementById('pot-cards-count');
+  const elHumanHand = document.getElementById('human-hand-container');
+  const elBtnRaise = document.getElementById('btn-raise');
+  const elBtnCallLiar = document.getElementById('btn-call-liar');
+  const elRoundBadge = document.getElementById('round-counter-badge');
+  const elTelegramBody = document.getElementById('telegram-body');
+  const elGunshotFlash = document.getElementById('gunshot-flash');
+  const elBangSlam = document.getElementById('bang-slam');
+  const elTableStage = document.getElementById('table-stage');
+  const elBtnSound = document.getElementById('btn-sound-toggle');
+  const elBtnSpeed = document.getElementById('btn-speed-toggle');
+
+  function addTelegramLog(text, highlight = false) {
+    const entry = document.createElement('div');
+    entry.className = 'telegram-entry' + (highlight ? ' highlight' : '');
+    entry.textContent = text;
+    elTelegramBody.insertBefore(entry, elTelegramBody.firstChild);
+  }
+
+  function showSpeechBubble(playerKey, text, duration = 3000) {
+    const bubble = document.getElementById('bubble-' + playerKey);
+    if (!bubble) return;
+    bubble.textContent = '"' + text + '"';
+    bubble.classList.add('visible');
+    setTimeout(() => {
+      bubble.classList.remove('visible');
+    }, GameState.skipAnimation ? 1200 : duration);
+  }
+
+  function triggerScreenShake() {
+    elTableStage.classList.add('screen-shaking');
+    elGunshotFlash.classList.add('flashing');
+    setTimeout(() => {
+      elGunshotFlash.classList.remove('flashing');
+    }, 90);
+    setTimeout(() => {
+      elTableStage.classList.remove('screen-shaking');
+    }, 450);
+  }
+
+  function triggerBangSlam() {
+    elBangSlam.classList.add('slamming');
+    setTimeout(() => {
+      elBangSlam.classList.remove('slamming');
+    }, 900);
+  }
+
+  function updatePlaques() {
+    GameState.players.forEach(p => {
+      const seat = document.getElementById('seat-' + p.key);
+      if (!seat) return;
+
+      if (p.maxCards <= 0) {
+        seat.classList.add('eliminated');
+      } else {
+        seat.classList.remove('eliminated');
+      }
+
+      const miniHolder = document.getElementById('cards-mini-' + p.key);
+      if (miniHolder) {
+        miniHolder.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+          const m = document.createElement('div');
+          m.className = 'mini-card-icon' + (i < p.maxCards ? '' : ' empty');
+          miniHolder.appendChild(m);
+        }
+      }
+
+      const chamberHolder = document.getElementById('chamber-' + p.key);
+      if (chamberHolder) {
+        chamberHolder.innerHTML = '';
+        for (let i = 0; i < 6; i++) {
+          const ch = document.createElement('div');
+          ch.className = 'chamber-hole' + (i < p.maxCards ? ' loaded' : ' spent');
+          chamberHolder.appendChild(ch);
+        }
+      }
+    });
+
+    elPotCardsCount.textContent = getTotalCardsInPlay() + ' CARDS IN PLAY';
+    elRoundBadge.textContent = 'ROUND ' + GameState.round;
+  }
+
+  function updateCurrentBetPoster() {
+    if (!GameState.currentBet) {
+      elBetDisplay.innerHTML = '<span>NO BET YET</span>';
+      elBettorDisplay.textContent = 'Awaiting opening wager...';
+      elWantedPoster.style.borderColor = '#815933';
+      return;
+    }
+
+    const bettor = GameState.players[GameState.currentBet.bettorId];
+    const rankName = {
+      '9': 'NINES', '10': 'TENS', 'J': 'JACKS', 'Q': 'QUEENS', 'K': 'KINGS', 'A': 'ACES'
+    }[GameState.currentBet.rank];
+
+    elBetDisplay.innerHTML = '<span>' + GameState.currentBet.count + ' × ' + rankName + '</span>';
+    elBettorDisplay.textContent = 'Staked by ' + bettor.name + ' (' + bettor.title + ')';
+    elWantedPoster.style.borderColor = '#ffd700';
+    playWoodThud();
+  }
+
+  function renderHumanHand() {
+    elHumanHand.innerHTML = '';
+    const human = GameState.players[0];
+    const n = human.cards.length;
+    const mid = (n - 1) / 2;
+
+    human.cards.forEach((card, idx) => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'saloon-card human-hand-card';
+      const offset = idx - mid;
+      const rot = offset * 6;
+      const transY = Math.abs(offset) * 4;
+      cardEl.style.transform = 'rotate(' + rot + 'deg) translateY(' + transY + 'px)';
+      cardEl.style.zIndex = idx + 1;
+
+      const isRed = card.suit === '♥' || card.suit === '♦';
+      cardEl.innerHTML = 
+        '<div class="card-face card-front ' + (isRed ? 'red-suit' : '') + '">' +
+          '<div class="card-corner-rank">' + card.rank + '<br>' + card.suit + '</div>' +
+          '<div class="card-center-symbol">' + card.suit + '</div>' +
+          '<div class="card-corner-rank card-corner-bottom">' + card.rank + '<br>' + card.suit + '</div>' +
+        '</div>';
+      elHumanHand.appendChild(cardEl);
+    });
+  }
+
+  function renderAICardBacks() {
+    [1, 2, 3].forEach(id => {
+      const p = GameState.players[id];
+      const fan = document.getElementById('cards-fan-' + p.key);
+      if (!fan) return;
+      fan.innerHTML = '';
+      if (p.maxCards <= 0) return;
+
+      p.cards.forEach((card, idx) => {
+        const shell = document.createElement('div');
+        shell.className = 'ai-card-shell';
+        shell.id = 'ai-card-' + p.key + '-' + idx;
+        const isRed = card.suit === '♥' || card.suit === '♦';
+
+        shell.innerHTML = 
+          '<div class="card-face card-back">' +
+            '<div class="card-back-pattern">' +
+              '<span style="font-size:1.1rem; color:#d4af37;">☠</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="card-face card-front ' + (isRed ? 'red-suit' : '') + '">' +
+            '<div class="card-corner-rank" style="font-size:0.75rem;">' + card.rank + '</div>' +
+            '<div class="card-center-symbol" style="font-size:1.1rem;">' + card.suit + '</div>' +
+          '</div>';
+        fan.appendChild(shell);
+      });
+    });
+  }
+
+  function revealAllHands(targetRank) {
+    [1, 2, 3].forEach(id => {
+      const p = GameState.players[id];
+      p.cards.forEach((card, idx) => {
+        const shell = document.getElementById('ai-card-' + p.key + '-' + idx);
+        if (shell) {
+          shell.classList.add('flipped');
+          if (card.rank === targetRank) {
+            shell.classList.add('matching-glow');
+          }
+        }
+      });
+    });
+
+    const humanCards = elHumanHand.querySelectorAll('.human-hand-card');
+    GameState.players[0].cards.forEach((card, idx) => {
+      if (card.rank === targetRank && humanCards[idx]) {
+        humanCards[idx].classList.add('matching-glow');
+      }
+    });
+  }
+
+  /* ============================================================
+     HUMAN CONTROLS VALIDATION & EVENT HANDLERS
+     ============================================================ */
+  function updateHumanButtonsValidation() {
+    const totalInPlay = getTotalCardsInPlay();
+    const current = GameState.currentBet;
+    const isHumanTurn = (GameState.turnIndex === 0 && GameState.inRound);
+
+    document.querySelectorAll('.count-btn').forEach(btn => {
+      const c = parseInt(btn.dataset.count, 10);
+      btn.classList.toggle('selected', c === GameState.selectedCount);
+      const countValid = (c <= 4 && c <= totalInPlay);
+      btn.disabled = !isHumanTurn || !countValid;
+    });
+
+    document.querySelectorAll('.rank-btn').forEach(btn => {
+      const r = btn.dataset.rank;
+      btn.classList.toggle('selected', r === GameState.selectedRank);
+      btn.disabled = !isHumanTurn;
+    });
+
+    const candidateBet = { count: GameState.selectedCount, rank: GameState.selectedRank };
+    const isValidRaise = isHigherBet(candidateBet, current) && candidateBet.count <= Math.min(4, totalInPlay);
+
+    elBtnRaise.disabled = !isHumanTurn || !isValidRaise;
+    elBtnRaise.textContent = candidateBet ? ('RAISE TO ' + candidateBet.count + ' × ' + candidateBet.rank) : 'RAISE BET';
+    
+    elBtnCallLiar.disabled = !isHumanTurn || !current;
+  }
+
+  document.querySelectorAll('.count-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      GameState.selectedCount = parseInt(btn.dataset.count, 10);
+      playWoodThud();
+      updateHumanButtonsValidation();
+    });
+  });
+
+  document.querySelectorAll('.rank-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      GameState.selectedRank = btn.dataset.rank;
+      playWoodThud();
+      updateHumanButtonsValidation();
+    });
+  });
+
+  elBtnRaise.addEventListener('click', () => {
+    if (GameState.turnIndex !== 0 || !GameState.inRound) return;
+    executeRaise(0, { count: GameState.selectedCount, rank: GameState.selectedRank });
+  });
+
+  elBtnCallLiar.addEventListener('click', () => {
+    if (GameState.turnIndex !== 0 || !GameState.inRound) return;
+    executeCallLiar(0);
+  });
+
+  /* ============================================================
+     GAME FLOW ENGINE: DEAL, TURNS, RESOLUTION
+     ============================================================ */
+  function startNewRound() {
+    const active = getActivePlayers();
+    if (active.length <= 1) {
+      endGame();
+      return;
+    }
+
+    GameState.inRound = true;
+    GameState.currentBet = null;
+    GameState.betHistory = [];
+    GameState.round++;
+    updateCurrentBetPoster();
+
+    const deck = buildSaloonDeck();
+    playCardFlick();
+
+    active.forEach(p => {
+      p.cards = deck.splice(0, p.maxCards);
+    });
+
+    updatePlaques();
+    renderHumanHand();
+    renderAICardBacks();
+    addTelegramLog('Round ' + GameState.round + ' dealt. ' + getTotalCardsInPlay() + ' cards in play.');
+
+    setTurn(GameState.starterIndex);
+  }
+
+  function setTurn(playerIndex) {
+    GameState.turnIndex = playerIndex;
+    const player = GameState.players[playerIndex];
+
+    GameState.players.forEach(p => {
+      const seat = document.getElementById('seat-' + p.key);
+      if (seat) seat.classList.toggle('active-turn', p.id === playerIndex);
+    });
+
+    if (playerIndex === 0) {
+      const legalRaises = getLegalRaises(GameState.currentBet, getTotalCardsInPlay());
+      if (legalRaises.length > 0) {
+        GameState.selectedCount = legalRaises[0].count;
+        GameState.selectedRank = legalRaises[0].rank;
+      }
+      updateHumanButtonsValidation();
+    } else {
+      updateHumanButtonsValidation();
+      triggerAITurn(player);
+    }
+  }
+
+  function triggerAITurn(aiPlayer) {
+    const thinkingEl = document.getElementById('thinking-' + aiPlayer.key);
+    if (thinkingEl) thinkingEl.style.display = 'flex';
+
+    const delay = GameState.skipAnimation ? 400 : (800 + Math.random() * 1000);
+
+    setTimeout(() => {
+      if (thinkingEl) thinkingEl.style.display = 'none';
+      if (!GameState.inRound) return;
+
+      const decision = getAIDecision(aiPlayer, GameState.currentBet, GameState.betHistory);
+      if (decision.action === 'call') {
+        executeCallLiar(aiPlayer.id);
+      } else {
+        executeRaise(aiPlayer.id, decision.bet);
+      }
+    }, delay);
+  }
+
+  function executeRaise(playerIndex, newBet) {
+    const player = GameState.players[playerIndex];
+    GameState.currentBet = { count: newBet.count, rank: newBet.rank, bettorId: playerIndex };
+    GameState.betHistory.push({ player: player.name, bet: GameState.currentBet });
+
+    if (playerIndex === 0) {
+      GameState.stats.humanBluffsAttempted++;
+    }
+
+    const line = getDialogue(player.key, 'raising');
+    showSpeechBubble(player.key, line);
+    addTelegramLog(player.name + ' raised to ' + newBet.count + ' × ' + newBet.rank);
+    updateCurrentBetPoster();
+
+    const active = getActivePlayers();
+    let nextIdx = (active.findIndex(p => p.id === playerIndex) + 1) % active.length;
+    setTurn(active[nextIdx].id);
+  }
+
+  function executeCallLiar(callerIndex) {
+    GameState.inRound = false;
+    const caller = GameState.players[callerIndex];
+    const bettor = GameState.players[GameState.currentBet.bettorId];
+    const currentBet = GameState.currentBet;
+
+    playGunshot();
+    triggerScreenShake();
+    triggerBangSlam();
+
+    const callLine = getDialogue(caller.key, 'calling');
+    showSpeechBubble(caller.key, callLine, 3500);
+    addTelegramLog('💥 ' + caller.name + ' CALLED LIAR ON ' + bettor.name + '!', true);
+
+    revealAllHands(currentBet.rank);
+
+    let actualCount = 0;
+    const active = getActivePlayers();
+    active.forEach(p => {
+      p.cards.forEach(c => {
+        if (c.rank === currentBet.rank) actualCount++;
+      });
+    });
+
+    const betIsTrue = (actualCount >= currentBet.count);
+    let roundLoser;
+
+    if (callerIndex === 0) {
+      GameState.stats.humanCallsMade++;
+      if (!betIsTrue) GameState.stats.humanCallsCorrect++;
+    }
+
+    if (betIsTrue) {
+      caller.stung = true;
+      bettor.stung = false;
+      bettor.truthfulBets++;
+      roundLoser = caller;
+
+      const penalty = Math.min(2, caller.maxCards);
+      caller.maxCards -= penalty;
+
+      addTelegramLog('Truth! ' + actualCount + ' × ' + currentBet.rank + ' existed. ' + caller.name + ' loses ' + penalty + ' cards.', true);
+
+      setTimeout(() => {
+        showSpeechBubble(caller.key, getDialogue(caller.key, 'caught_calling_wrong'), 3000);
+      }, 1000);
+
+    } else {
+      bettor.stung = true;
+      caller.stung = false;
+      bettor.bluffsCaught++;
+      caller.callsCorrect++;
+      roundLoser = bettor;
+
+      if (bettor.id === 0) GameState.stats.humanBluffsCaught++;
+
+      const penalty = Math.min(2, bettor.maxCards);
+      bettor.maxCards -= penalty;
+
+      addTelegramLog('Liar caught! Only ' + actualCount + ' × ' + currentBet.rank + ' existed. ' + bettor.name + ' loses ' + penalty + ' cards.', true);
+
+      setTimeout(() => {
+        showSpeechBubble(bettor.key, getDialogue(bettor.key, 'caught_lying'), 3000);
+      }, 1000);
+    }
+
+    updatePlaques();
+
+    if (roundLoser.maxCards <= 0) {
+      playDeathBell();
+      addTelegramLog('☠ ' + roundLoser.name + ' was ELIMINATED!', true);
+      setTimeout(() => {
+        showSpeechBubble(roundLoser.key, getDialogue(roundLoser.key, 'eliminated'), 3500);
+      }, 2000);
+    }
+
+    const delayNextRound = GameState.skipAnimation ? 2000 : 4200;
+    setTimeout(() => {
+      const remainingActive = getActivePlayers();
+      if (remainingActive.length <= 1) {
+        endGame();
+        return;
+      }
+
+      if (roundLoser.maxCards > 0) {
+        GameState.starterIndex = roundLoser.id;
+      } else {
+        const loserOrigIdx = GameState.players.indexOf(roundLoser);
+        let nextIdx = (loserOrigIdx + 1) % GameState.players.length;
+        while (GameState.players[nextIdx].maxCards <= 0) {
+          nextIdx = (nextIdx + 1) % GameState.players.length;
+        }
+        GameState.starterIndex = GameState.players[nextIdx].id;
+      }
+
+      startNewRound();
+    }, delayNextRound);
+  }
+
+  function endGame() {
+    GameState.inRound = false;
+    const remainingActive = getActivePlayers();
+    const winner = remainingActive[0] || GameState.players[0];
+
+    const elModal = document.getElementById('modal-gameover');
+    const elTitle = document.getElementById('gameover-title');
+    const elSub = document.getElementById('gameover-subtitle');
+    const elStats = document.getElementById('gameover-stats');
+
+    if (winner.id === 0) {
+      playWinChime();
+      elTitle.textContent = 'LAST ONE STANDING';
+      elTitle.style.color = '#ffd700';
+      elSub.textContent = 'You took down the table. All the gold is yours.';
+    } else {
+      playDeathBell();
+      elTitle.textContent = winner.name.toUpperCase() + ' WINS';
+      elTitle.style.color = '#ff4444';
+      elSub.textContent = winner.name + ' (' + winner.title + ') cleared the saloon.';
+      showSpeechBubble(winner.key, getDialogue(winner.key, 'winning'), 4000);
+    }
+
+    elStats.innerHTML = 
+      '<p><strong>Winner:</strong> ' + winner.name + ' (' + winner.title + ')</p>' +
+      '<p><strong>Rounds Played:</strong> ' + GameState.round + '</p>' +
+      '<p><strong>Your Bluffs Caught:</strong> ' + GameState.stats.humanBluffsCaught + '</p>' +
+      '<p><strong>Your Accurate Calls:</strong> ' + GameState.stats.humanCallsCorrect + ' / ' + GameState.stats.humanCallsMade + '</p>';
+
+    elModal.classList.remove('hidden');
+  }
+
+  function resetGame() {
+    GameState.round = 0;
+    GameState.starterIndex = 0;
+    GameState.players.forEach(p => {
+      p.maxCards = 5;
+      p.cards = [];
+      p.bluffsCaught = 0;
+      p.truthfulBets = 0;
+      p.callsMade = 0;
+      p.callsCorrect = 0;
+      p.stung = false;
+    });
+    GameState.stats = {
+      roundsPlayed: 0,
+      humanBluffsAttempted: 0,
+      humanBluffsCaught: 0,
+      humanCallsMade: 0,
+      humanCallsCorrect: 0
+    };
+    document.querySelectorAll('.dead-man-stamp').forEach(s => s.style.transform = 'translate(-50%, -50%) rotate(-18deg) scale(0)');
+    startNewRound();
+  }
+
+  /* ============================================================
+     DUST MOTES AMBIENT CANVAS
+     ============================================================ */
+  const canvas = document.getElementById('dust-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  for (let i = 0; i < 45; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      radius: Math.random() * 2 + 0.8,
+      speedX: (Math.random() - 0.5) * 0.35,
+      speedY: -Math.random() * 0.45 - 0.1,
+      alpha: Math.random() * 0.5 + 0.2
+    });
+  }
+
+  function renderDust() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffcf70';
+    particles.forEach(p => {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      if (p.y < 0) { p.y = canvas.height; p.x = Math.random() * canvas.width; }
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+
+      ctx.globalAlpha = p.alpha;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    requestAnimationFrame(renderDust);
+  }
+  requestAnimationFrame(renderDust);
+
+  /* ============================================================
+     SIMULATION TEST LAB (200 GAMES PLAYTEST BUTTON)
+     ============================================================ */
+  function runSimulationLab() {
+    initAudio();
+    addTelegramLog('Running 200 automated playtest games...', true);
+    let totalRounds = 0;
+    const wins = { Mara: 0, Duke: 0, Silas: 0, You: 0 };
+
+    for (let g = 0; g < 200; g++) {
+      const simPlayers = [
+        { id: 0, name: 'You', persona: 'mathematician', maxCards: 5, cards: [] },
+        { id: 1, name: 'Mara', persona: 'mathematician', maxCards: 5, cards: [] },
+        { id: 2, name: 'Duke', persona: 'hot_lead', maxCards: 5, cards: [] },
+        { id: 3, name: 'Silas', persona: 'undertaker', maxCards: 5, cards: [] }
+      ];
+      let rounds = 0;
+      let starter = 0;
+
+      while (simPlayers.filter(p => p.maxCards > 0).length > 1) {
+        rounds++;
+        if (rounds > 100) break;
+        const act = simPlayers.filter(p => p.maxCards > 0);
+        const deck = buildSaloonDeck();
+        act.forEach(p => p.cards = deck.splice(0, p.maxCards));
+
+        let curBet = null;
+        let t = starter % act.length;
+
+        while (true) {
+          const pl = act[t];
+          const raises = getLegalRaises(curBet, act.reduce((s, p) => s + p.maxCards, 0));
+          if (!curBet) {
+            curBet = { count: 1, rank: pl.cards[0].rank, bettorId: pl.id };
+            t = (t + 1) % act.length;
+            continue;
+          }
+          if (raises.length === 0 || Math.random() < 0.32) {
+            let cnt = 0;
+            act.forEach(p => p.cards.forEach(c => { if (c.rank === curBet.rank) cnt++; }));
+            const isTrue = cnt >= curBet.count;
+            const loser = isTrue ? pl : simPlayers[curBet.bettorId];
+            loser.maxCards -= Math.min(2, loser.maxCards);
+            if (loser.maxCards > 0) {
+              starter = act.indexOf(loser);
+            } else {
+              starter = (starter + 1) % act.length;
+            }
+            break;
+          } else {
+            curBet = { count: raises[0].count, rank: raises[0].rank, bettorId: pl.id };
+            t = (t + 1) % act.length;
+          }
+        }
+      }
+      totalRounds += rounds;
+      const winner = simPlayers.find(p => p.maxCards > 0) || simPlayers[0];
+      wins[winner.name] = (wins[winner.name] || 0) + 1;
+    }
+
+    const summary = '200 Games Simulated. Avg Rounds: ' + (totalRounds / 200).toFixed(1) + '. Wins: Mara: ' + wins.Mara + ', Duke: ' + wins.Duke + ', Silas: ' + wins.Silas + ', You: ' + wins.You;
+    addTelegramLog(summary, true);
+    alert(summary);
+  }
+
+  /* ============================================================
+     MODAL CONTROLS & EVENT LISTENERS
+     ============================================================ */
+  document.getElementById('btn-title-start').addEventListener('click', () => {
+    initAudio();
+    document.getElementById('modal-title').classList.add('hidden');
+    resetGame();
+  });
+
+  document.getElementById('btn-title-rules').addEventListener('click', () => {
+    document.getElementById('modal-rules').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-title-sim').addEventListener('click', () => {
+    runSimulationLab();
+  });
+
+  document.getElementById('btn-rules-open').addEventListener('click', () => {
+    document.getElementById('modal-rules').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-rules-close').addEventListener('click', () => {
+    document.getElementById('modal-rules').classList.add('hidden');
+  });
+
+  document.getElementById('btn-rematch').addEventListener('click', () => {
+    document.getElementById('modal-gameover').classList.add('hidden');
+    resetGame();
+  });
+
+  document.getElementById('btn-back-title').addEventListener('click', () => {
+    document.getElementById('modal-gameover').classList.add('hidden');
+    document.getElementById('modal-title').classList.remove('hidden');
+  });
+
+  elBtnSound.addEventListener('click', () => {
+    initAudio();
+    isMuted = !isMuted;
+    elBtnSound.textContent = isMuted ? '🔇 SOUND: OFF' : '🔊 SOUND: ON';
+    elBtnSound.style.borderColor = isMuted ? '#b67d40' : '#ffd700';
+  });
+
+  elBtnSpeed.addEventListener('click', () => {
+    GameState.skipAnimation = !GameState.skipAnimation;
+    elBtnSpeed.textContent = GameState.skipAnimation ? '⚡ FAST SPEED' : '⏳ NORMAL';
+  });
+
+})();
+</script>
+</body>
+</html>
+'''
+
+target_dir = '/Users/ericmiller/.gemini/antigravity/scratch/dead-mans-bluff'
+os.makedirs(target_dir, exist_ok=True)
+out_file = os.path.join(target_dir, 'index.html')
+with open(out_file, 'w', encoding='utf-8') as f:
+    f.write(HTML_CODE)
+
+print(f"Generated {out_file} successfully! Size: {len(HTML_CODE)} bytes")
